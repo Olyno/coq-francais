@@ -23,4 +23,11 @@ app.use(async (ctx, next) => {
     return next();
 })
 
-app.listen(PORT, () => console.log('> Server listening at http://localhost:' + PORT))
+const server = require('http').Server(app.callback());
+const io = require('socket.io')(server);
+
+server.listen(PORT, () => console.log('> Server listening at http://localhost:' + PORT))
+
+io.on('connection', socket => {
+    console.log('New connection!');
+})
