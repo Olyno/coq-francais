@@ -1,0 +1,9 @@
+[server]
+
+port = 3000
+
+[database]
+
+username = ''
+password = ''
+url = ''
