@@ -1,0 +1,83 @@
+body {
+    background-color: #80BB9A;
+    color: black;
+    height: 100vh;
+}
+
+header{
+    margin-left: 30pt;
+    margin-right: 30pt;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    height: 94pt;
+
+}
+.cross {
+    position: relative;
+    height: 15.4pt;
+    width: 46.19pt;
+    margin-top: 20pt;
+}
+.trait:first-child {
+    width: 20pt;
+    height: 2px;
+    background-color: black;
+    position: absolute;
+    transform: rotate(45deg);
+}
+
+.trait:last-child{
+    width: 20pt;
+    height: 2px;
+    background-color: black;
+    position: absolute;
+    transform: rotate(-45deg);
+
+}
+.name {
+    margin-top: 8pt;
+}
+.image {
+    height: 50pt;
+    width: 50pt;
+    background-color: white;
+    border-radius: 25pt;
+}
+.summary {
+    color: white;
+    padding-top: 20pt;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15pt;
+}
+
+.summary div {
+    display: flex;
+    flex-direction: row;
+    margin-left: 30pt;
+    padding-bottom: 15pt;
+}
+.summary div img {
+    width: 30pt;
+    height: 30pt;
+}
+.summary p {
+    padding-left: 2vw;
+}
+footer {
+    color: white;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+    position: absolute;
+    bottom: 0pt;
+    width: 100vw;
+}
+footer div {
+    height: 20pt;
+    width: 1pt;
+    background-color: white;
+}
