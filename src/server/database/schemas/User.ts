@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+import { PublicUserSchema } from './PublicUser';
 
 const UserSchema = new Schema({
     login: {
@@ -14,9 +15,25 @@ const UserSchema = new Schema({
         required: true,
         match: /\S+@\S+\.\S+/gi
     },
-    points: {
-        type: Number,
-        default: 0
+    public: {
+        type: PublicUserSchema,
+        required: true
+    },
+    pending_friends: {
+        type: [PublicUserSchema],
+        default: []
+    },
+    asked_friends: {
+        type: [PublicUserSchema],
+        default: []
+    },
+    blocked_friends: {
+        type: [PublicUserSchema],
+        default: []
+    },
+    friends: {
+        type: [PublicUserSchema],
+        default: []
     }
 })
 

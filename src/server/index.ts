@@ -44,4 +44,3 @@ createSocketServer(app)
     })
 
 dbLogin(config.database.username, config.database.password, config.database.url);
-createSocketServer(app);
