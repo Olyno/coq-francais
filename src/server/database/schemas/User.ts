@@ -2,10 +2,6 @@ import { Schema, model } from 'mongoose';
 import { PublicUserSchema } from './PublicUser';
 
 const UserSchema = new Schema({
-    login: {
-        type: String,
-        required: true
-    },
     password: {
         type: String,
         required: true
@@ -16,10 +12,15 @@ const UserSchema = new Schema({
         match: /\S+@\S+\.\S+/gi
     },
     sexe: {
-        type: String
+        type: String,
+        required: true
     },
     birthdate: {
-        type: Date
+        type: Date,
+        required: true
+    },
+    club: {
+        type: String
     },
     public: {
         type: PublicUserSchema,

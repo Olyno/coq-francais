@@ -1,71 +1,44 @@
 body {
-    background-color: #80BB9A;
     color: black;
     height: 100vh;
 }
 
-header{
-    margin-left: 30pt;
-    margin-right: 30pt;
-    padding-top: 25pt;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    position: relative;
-    height: 94pt;
+.small-section { padding: 1rem 1.5rem; }
 
+.green-background { background-color: #80BB9A; color: white; }
+.purple-background { background-color: #562E8A; color: white; }
+.is-white { color: white }
+.is-bottom { bottom: 0px; }
+.with-line { border-bottom: solid #F7E045 !important; }
+.vertical-line { height: 30px; width: 2px; background-color: white; }
+
+.avatar {
+    width: 60px;
+    border-radius: 50%;
 }
-.burger {
-    position: relative;
-    height: 15.4pt;
-    width: 46.19pt;
-    margin-top: 15pt;
+
+.avatar-bigger {
+    width: 120px;
+    border-radius: 50%;
 }
-.trait:first-child {
-    width: 30.79pt;
-    height: 1pt;
-    background-color: black;
-    position: absolute;
+
+.section-element {
+    border-style: none;
+    color: #4D4D4D;
 }
-.trait:nth-child(2){
-    width: 46.19pt;
-    height: 2pt;
-    background-color: black;
-    position: absolute;
-    top: 7.7pt;
+
+input {
+    border-bottom: solid #F7E045 !important;
+    border-top-style: hidden !important;
+    border-right-style: hidden !important;
+    border-left-style: hidden !important;
+    border-right: transparent !important;
+    color: #4D4D4D !important;
 }
-.trait:last-child{
-    width: 27.71pt;
-    height: 2pt;
-    background-color: black;
-    position: absolute;
-    left: 18.48pt;
-    top: 15.4pt;
-}
-.name {
-    margin-top: 8pt;
-}
-.image {
-    height: 50pt;
-    width: 50pt;
+
+.white-bordered-background {
     background-color: white;
-    border-radius: 25pt;
-}
-.home {
-    background-color: white;
-    border-radius: 30pt 30pt 0 0;
-    height: 474pt;
-    position: relative;
-}
-.home p {
-    width: 260pt;
-    height: 40pt;
-    position: absolute;
-    top: 40pt;
-    left: 25pt;
-    color: #562E8A;
-    font-size: 15pt;
-    text-align: center;
-
-
+    height: 100vh;
+    border-top-left-radius: 35px;
+    border-top-right-radius: 35px;
 }

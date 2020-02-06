@@ -12,9 +12,9 @@ import { IPublicUser, IBadge } from '../types';
 const router = new Router();
 
 async function signin(ctx: any, next) {
-    const { login, password } = ctx.request.body;
+    const { email, password } = ctx.request.body;
     await new Promise((resolve, rejects) => {
-        Users.findOne({ login })
+        Users.findOne({ email })
             .then((user: Document) => {
                 if (user) {
                     bcrypt.compare(password, user.get('password'))
@@ -51,32 +51,36 @@ async function signin(ctx: any, next) {
 }
 
 async function signup(ctx: any, next) {
-    const { login, email, password, repeatPassword } = ctx.request.body;
+    const { username, email, password, repeatPassword, birthdate, sex, club } = ctx.request.body;
     if (password !== repeatPassword) {
         status(ctx, 401, 'Both password are not the same');
         return next();
     }
     await new Promise((resolve, rejects) => {
-        Users.findOne({ login, email })
+        Users.findOne({ 'public.username': username, email })
             .then((user: Document) => {
                 if (!user) {
                     bcrypt.hash(password, 10)
                         .then((encryptedPassword: string) => {
                             Users.create({
-                                login,
                                 email,
+                                birthdate,
+                                club,
                                 password: encryptedPassword,
+                                sexe: sex,
                                 public: {
-                                    username: login
+                                    username
                                 }
                             })
                                 .then((newUser) => {
                                     ctx.status = 200;
                                     ctx.body = {
                                         _id: newUser.get('_id'),
-                                        login: newUser.get('login'),
                                         public: newUser.get('public'),
-                                        email: newUser.get('email')
+                                        email: newUser.get('email'),
+                                        sexe: newUser.get('sexe'),
+                                        club: newUser.get('club'),
+                                        birthdate: newUser.get('birthdate')
                                     };
                                     resolve();
                                 })
@@ -97,24 +101,38 @@ async function signup(ctx: any, next) {
 }
 
 async function editUser(ctx: any, next) {
-    const { user: userId, email, avatar, username } = ctx.request.body;
+    const { user: userId, email, avatar, username, birthdate, sexe } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    user
-                        .set('email', email)
-                        .set('avatar', avatar)
-                        .set('username', username)
-                        .save()
-                        .then((newUser: Document) => {
-                            ctx.status = 200;
-                            ctx.body = {
-                                login: newUser.get('login'),
-                                public: newUser.get('public'),
-                                email: newUser.get('email')
-                            };
-                            resolve();
+                    Users.findOne({ username })
+                        .then((alreadyExist: Document) => {
+                            if (!alreadyExist) {
+                                Users.findByIdAndUpdate(userId, {
+                                    email: email || user.get('email'),
+                                    birthdate: birthdate || user.get('birthdate'),
+                                    sexe: sexe || user.get('sexe'),
+                                    'public.avatar': avatar || user.get('public.avatar'),
+                                    'public.username': username || user.get('public.username')
+                                }, { new: true }, (err, newUser) => {
+                                    if (err) rejects(err);
+                                    ctx.status = 200;
+                                    ctx.body = {
+                                        _id: newUser.get('_id'),
+                                        public: newUser.get('public'),
+                                        email: newUser.get('email'),
+                                        sexe: newUser.get('sexe'),
+                                        club: newUser.get('club'),
+                                        birthdate: newUser.get('birthdate')
+                                    };
+                                    console.log('new USer', newUser)
+                                    resolve();
+                                })
+                            } else {
+                                status(ctx, 403, 'This username already exist. Please change it.');
+                                rejects();
+                            }
                         })
                         .catch(rejects);
                 } else {
@@ -328,34 +346,92 @@ async function getPendingFriends(ctx: any, next) {
 
 }
 
-async function askFriend(ctx: any, next) {
-    const { user: userId, friend: friendId } = ctx.request.body;
+async function getBlockedFriends(ctx: any, next) {
+    const { user: userId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
-                        .then((friend: Document) => {
-                            if (friend) {
-                                const alreadyAsked = friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() === user.get('public._id').toString()).length > 0;
-                                if (!alreadyAsked) {
-                                    Users.findByIdAndUpdate(friendId, {
-                                        pending_friends: [...friend.get('pending_friends'), user.get('public')]
-                                    }, { new: true }, (err, newUser) => {
-                                        if (err) rejects(err);
-                                        ctx.status = 200;
-                                        resolve();
-                                    })
-                                } else {
-                                    status(ctx, 403, 'You already asked this user as friend.');
-                                    rejects();
-                                }
-                            } else {
-                                status(ctx, 401, 'This friend id is incorrect.');
-                                rejects();
-                            }
-                        })
-                        .catch(rejects);
+                    ctx.status = 200;
+                    ctx.body = user.get('blocked_friends');
+                    resolve();
+                } else {
+                    status(ctx, 401, 'This login is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function getAskedFriends(ctx: any, next) {
+    const { user: userId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                Users.find({})
+                    .then((users: Document[]) => {
+                        if (users.length > 0) {
+                            ctx.status = 200;
+                            ctx.body = users.filter(u => u.get('pending_friends').filter(u => u.get('_id').toString() === user.get('public._id').toString()).length > 0);
+                            resolve();
+                        } else {
+                            status(ctx, 401, 'There are no any user.');
+                            rejects();
+                        }
+                    })
+                    .catch(rejects);
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function askFriend(ctx: any, next) {
+    const { user: userId, friend: friendUsername } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    if (user.get('public.username') !== friendUsername) {
+                        if (user.get('friends').filter((f: Document) => f.get('username') === friendUsername).length === 0) {
+                            Users.findOne({ 'public.username': friendUsername })
+                                .then((friend: Document) => {
+                                    if (friend) {
+                                        const alreadyAsked = friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() === user.get('public._id').toString()).length > 0;
+                                        if (!alreadyAsked) {
+                                            Users.findByIdAndUpdate(friend.get('_id').toString(), { 
+                                                pending_friends: [...friend.get('pending_friends'), user.get('public')]
+                                            }, { new: true }, (err, newUser) => {
+                                                if (err) rejects(err);
+                                                ctx.status = 200;
+                                                resolve();
+                                            });
+                                        } else {
+                                            status(ctx, 403, 'You already asked this user as friend.');
+                                            rejects();
+                                        }
+                                    } else {
+                                        status(ctx, 401, 'This friend id is incorrect.');
+                                        rejects();
+                                    }
+                                })
+                                .catch(rejects);
+                        } else {
+                            status(ctx, 403, 'You already have this user in your friends list');
+                            rejects();
+                        }  
+                    } else {
+                        status(ctx, 403, 'You can\'t add yourself!');
+                        rejects();
+                    }
                 } else {
                     status(ctx, 401, 'This user id is incorrect.');
                     rejects();
@@ -375,12 +451,12 @@ async function cancelAskFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const alreadyAsked = friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() === user.get('public._id').toString()).length > 0;
                                 if (alreadyAsked) {
-                                    Users.findByIdAndUpdate(friendId, {
+                                    Users.findByIdAndUpdate(friend.get('_id').toString(), {
                                         pending_friends: friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
                                     }, { new: true }, (err, newUser) => {
                                         if (err) rejects(err);
@@ -416,17 +492,17 @@ async function acceptFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const alreadyFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
                                 const isPending = user.get('pending_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
                                 if (isPending) {
                                     if (!alreadyFriend) {
-                                        Users.findByIdAndUpdate(friendId, {
+                                        Users.findByIdAndUpdate(friend.get('_id').toString(), {
                                             pending_friends: friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString()),
                                             friends: [...friend.get('friends'), user.get('public')]
-                                        }, { new: true }, (err, newUser) => {
+                                        }, { new: true }, (err) => {
                                             if (err) rejects(err);
                                             Users.findByIdAndUpdate(userId, {
                                                 pending_friends: user.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString()),
@@ -434,7 +510,10 @@ async function acceptFriend(ctx: any, next) {
                                             }, { new: true }, (err, newUser) => {
                                                 if (err) rejects(err);
                                                 ctx.status = 200;
-                                                ctx.body = newUser.get('friends');
+                                                ctx.body = {
+                                                    friends: newUser.get('friends'),
+                                                    pending_friends: newUser.get('pending_friends')
+                                                };
                                                 resolve();
                                             })
                                         })
@@ -471,7 +550,7 @@ async function declineFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const isPending = user.get('pending_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
@@ -513,7 +592,7 @@ async function removeFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const isFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
@@ -522,7 +601,7 @@ async function removeFriend(ctx: any, next) {
                                         friends: friend.get('friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
                                     }, { new: true }, (err, doc) => {
                                         if (err) rejects(err);
-                                        Users.findByIdAndUpdate(friendId, {
+                                        Users.findOneAndUpdate({ 'public._id': friendId }, {
                                             friends: user.get('friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
                                         }, { new: true }, (err, newUser) => {
                                             if (err) rejects(err);
@@ -560,7 +639,7 @@ async function blockFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const isFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
@@ -571,7 +650,10 @@ async function blockFriend(ctx: any, next) {
                                     }, { new: true }, (err, newUser) => {
                                         if (err) rejects(err);
                                         ctx.status = 200;
-                                        ctx.body = newUser.get('blocked_friends');
+                                        ctx.body = {
+                                            friends: newUser.get('friends'),
+                                            blocked_friends: newUser.get('blocked_friends')
+                                        };
                                         resolve();
                                     });
                                 } else {
@@ -603,7 +685,7 @@ async function unblockFriend(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findById(friendId)
+                    Users.findOne({ 'public._id': friendId })
                         .then((friend: Document) => {
                             if (friend) {
                                 const isBlocked = user.get('blocked_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
@@ -614,7 +696,10 @@ async function unblockFriend(ctx: any, next) {
                                     }, { new: true }, (err, newUser) => {
                                         if (err) rejects(err);
                                         ctx.status = 200;
-                                        ctx.body = newUser.get('blocked_friends');
+                                        ctx.body = {
+                                            friends: newUser.get('friends'),
+                                            blocked_friends: newUser.get('blocked_friends')
+                                        };
                                         resolve();
                                     });
                                 } else {
@@ -906,7 +991,9 @@ router.post('/api/users/challenges/completed', completeChallenge); // Tested
 router.post('/api/users/challenges/failed', failedChallenge); // Tested
 router.post('/api/users/friends', getFriends); // Tested
 router.post('/api/users/friends/pending', getPendingFriends); // Tested
+router.post('/api/users/friends/blocked', getBlockedFriends); // Tested
 router.post('/api/users/friends/ask', askFriend); // Tested
+router.post('/api/users/friends/asked', getAskedFriends);
 router.post('/api/users/friends/ask/cancel', cancelAskFriend); // Tested
 router.post('/api/users/friends/accept', acceptFriend); // Tested
 router.post('/api/users/friends/decline', declineFriend); // Tested
