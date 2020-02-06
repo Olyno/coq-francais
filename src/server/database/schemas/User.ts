@@ -15,15 +15,17 @@ const UserSchema = new Schema({
         required: true,
         match: /\S+@\S+\.\S+/gi
     },
+    sexe: {
+        type: String
+    },
+    birthdate: {
+        type: Date
+    },
     public: {
         type: PublicUserSchema,
         required: true
     },
     pending_friends: {
-        type: [PublicUserSchema],
-        default: []
-    },
-    asked_friends: {
         type: [PublicUserSchema],
         default: []
     },

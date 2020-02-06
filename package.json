@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^11.0.0",
-    "@rollup/plugin-node-resolve": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^7.1.1",
     "@sveltech/routify": "^1.0.1-52",
     "@types/bcrypt": "^3.0.0",
     "@types/koa": "^2.11.0",
@@ -38,7 +38,7 @@
     "@koa/cors": "^3.0.0",
     "@koa/router": "^8.0.5",
     "axios": "^0.19.0",
-    "bcrypt": "^3.0.7",
+    "bcrypt": "^3.0.8",
     "koa": "^2.11.0",
     "koa-bodyparser": "^4.2.1",
     "koa-compress": "^3.0.0",

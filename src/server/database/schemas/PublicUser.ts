@@ -3,10 +3,6 @@ import { BadgeSchema } from './Badge';
 import { ChallengeSchema } from './Challenge';
 
 const PublicUserSchema = new Schema({
-    user: {
-        type: String,
-        required: true
-    },
     username: {
         type: String,
         required: true
@@ -19,7 +15,7 @@ const PublicUserSchema = new Schema({
         type: Number,
         default: 0
     },
-    badge: {
+    badges: {
         type: [BadgeSchema],
         default: []
     },

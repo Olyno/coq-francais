@@ -7,14 +7,14 @@ import { TournamentModel as Tournaments } from '../database/schemas/Tournament';
 import { ChallengeModel as Challenges } from '../database/schemas/Challenge';
 import { ChatRoomModel as Rooms } from '../database/schemas/chat/ChatRoom';
 import { status, error } from '../../utils';
-import { IPublicUser } from '../types';
+import { IPublicUser, IBadge } from '../types';
 
-const router = new Router()
+const router = new Router();
 
 async function signin(ctx: any, next) {
-    const { user: userId, password } = ctx.request.body;
+    const { login, password } = ctx.request.body;
     await new Promise((resolve, rejects) => {
-        Users.findById(userId)
+        Users.findOne({ login })
             .then((user: Document) => {
                 if (user) {
                     bcrypt.compare(password, user.get('password'))
@@ -25,9 +25,9 @@ async function signin(ctx: any, next) {
                             } else {
                                 ctx.status = 200;
                                 ctx.body = {
-                                    id: user.get('_id'),
+                                    _id: user.get('_id'),
                                     login: user.get('login'),
-                                    author: user.get('author'),
+                                    public: user.get('public'),
                                     email: user.get('email')
                                 };
                                 resolve();
@@ -67,14 +67,13 @@ async function signup(ctx: any, next) {
                                 email,
                                 password: encryptedPassword,
                                 public: {
-                                    login,
                                     username: login
                                 }
                             })
                                 .then((newUser) => {
                                     ctx.status = 200;
                                     ctx.body = {
-                                        id: newUser.get('_id'),
+                                        _id: newUser.get('_id'),
                                         login: newUser.get('login'),
                                         public: newUser.get('public'),
                                         email: newUser.get('email')
@@ -146,8 +145,9 @@ async function getChats(ctx: any, next) {
                     ctx.body = userRooms.map(room => room.toJSON());
                     resolve();
                 } else {
-                    status(ctx, 404, 'This user is not in any room.');
-                    rejects();
+                    ctx.status = 200;
+                    ctx.body = [];
+                    resolve();
                 }
             })
             .catch(rejects);
@@ -167,7 +167,7 @@ async function getPublicUsers(ctx: any, next) {
                     ctx.body = users.map(user => user.get('public'));
                     resolve();
                 } else {
-                    status(ctx, 404, 'This user is not in any room.');
+                    status(ctx, 404, 'There are no any user for the moment :(');
                     rejects();
                 }
             })
@@ -210,7 +210,7 @@ async function getBadges(ctx: any, next) {
                     ctx.body = badges.map(badge => badge.toJSON());
                     resolve();
                 } else {
-                    status(ctx, 401, 'This login is incorrect.');
+                    status(ctx, 404, 'This user has not any badge.');
                     rejects();
                 }
             })
@@ -222,7 +222,7 @@ async function getBadges(ctx: any, next) {
 
 }
 
-async function addBadge(ctx: any, next) {
+async function addUserBadge(ctx: any, next) {
     const { user: userId, badge: badgeId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
@@ -230,14 +230,19 @@ async function addBadge(ctx: any, next) {
                 if (user) {
                     Badges.findById(badgeId)
                         .then((badge: Document) => {
-                            user.set('public.badge', [...user.get('public.badges'), badge.toObject()])
-                                .save()
-                                .then((newBadges) => {
+                            if (badge) {
+                                Users.findByIdAndUpdate(userId, {
+                                    'public.badges': [...user.get('public.badges'), badge.toObject()]
+                                }, { new: true }, (err, newBadges) => {
+                                    if (err) rejects(err);
                                     ctx.status = 200;
                                     ctx.body = newBadges.get('public.badges');
                                     resolve();
                                 })
-                                .catch(rejects);
+                            } else {
+                                status(ctx, 401, 'This badge is incorrect.');
+                                rejects();
+                            }
                         })
                 } else {
                     status(ctx, 401, 'This login is incorrect.');
@@ -252,19 +257,20 @@ async function addBadge(ctx: any, next) {
 
 }
 
-async function removeBadge(ctx: any, next) {
+async function removeUserBadge(ctx: any, next) {
     const { user: userId, badge: badgeId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    user.set('public.badge', user.get('public.badges').map(badge => badge._id !== badgeId))
-                        .save()
-                        .then((newBadges) => {
-                            ctx.status = 200;
-                            ctx.body = newBadges.get('public.badges');
-                            resolve();
-                        })
+                    Users.findByIdAndUpdate(userId, {
+                        'public.badges': user.get('public.badges').filter((badge: IBadge) => badge._id.toString() !== badgeId)
+                    }, { new: true }, (err, newBadges) => {
+                        if (err) rejects(err);
+                        ctx.status = 200;
+                        ctx.body = newBadges.get('public.badges');
+                        resolve();
+                    })
                 } else {
                     status(ctx, 401, 'This login is incorrect.');
                     rejects();
@@ -286,28 +292,6 @@ async function getFriends(ctx: any, next) {
                 if (user) {
                     ctx.status = 200;
                     ctx.body = user.get('friends');
-                    resolve();
-                } else {
-                    status(ctx, 401, 'This login is incorrect.');
-                    rejects();
-                }
-            })
-            .catch(rejects);
-    })
-    .catch(err => err && error(err.message || err, ctx));
-
-    return next();
-
-}
-
-async function getAskedFriends(ctx: any, next) {
-    const { user: userId } = ctx.request.body;
-    await new Promise((resolve, rejects) => {
-        Users.findById(userId)
-            .then((user: Document) => {
-                if (user) {
-                    ctx.status = 200;
-                    ctx.body = user.get('asked_friends');
                     resolve();
                 } else {
                     status(ctx, 401, 'This login is incorrect.');
@@ -345,40 +329,76 @@ async function getPendingFriends(ctx: any, next) {
 }
 
 async function askFriend(ctx: any, next) {
-    const { user: userId, friend: friendUsername } = ctx.request.body;
+    const { user: userId, friend: friendId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findOne({ friendUsername })
+                    Users.findById(friendId)
                         .then((friend: Document) => {
                             if (friend) {
-                                const askedFriends = friend.get('asked_friends');
-                                const alreadyAsked = askedFriends.filter(u => u.login !== user.get('public.login'));
+                                const alreadyAsked = friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() === user.get('public._id').toString()).length > 0;
                                 if (!alreadyAsked) {
-                                    friend.set('pending_friends', [...friend.get('pending_friends'), user.get('public')])
-                                        .save()
-                                        .catch(rejects);
-                                    user.set('asked_friends', [...user.get('asked_friends'), friend.get('public')])
-                                        .save()
-                                        .then((newUser: Document) => {
-                                            ctx.status = 200;
-                                            ctx.body = newUser.get('asked_friends');
-                                            resolve();
-                                        })
-                                        .catch(rejects);
+                                    Users.findByIdAndUpdate(friendId, {
+                                        pending_friends: [...friend.get('pending_friends'), user.get('public')]
+                                    }, { new: true }, (err, newUser) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        resolve();
+                                    })
                                 } else {
                                     status(ctx, 403, 'You already asked this user as friend.');
                                     rejects();
                                 }
                             } else {
-                                status(ctx, 404, 'This username is incorrect.');
+                                status(ctx, 401, 'This friend id is incorrect.');
                                 rejects();
                             }
                         })
                         .catch(rejects);
                 } else {
-                    status(ctx, 401, 'This login is incorrect.');
+                    status(ctx, 401, 'This user id is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function cancelAskFriend(ctx: any, next) {
+    const { user: userId, friend: friendId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    Users.findById(friendId)
+                        .then((friend: Document) => {
+                            if (friend) {
+                                const alreadyAsked = friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() === user.get('public._id').toString()).length > 0;
+                                if (alreadyAsked) {
+                                    Users.findByIdAndUpdate(friendId, {
+                                        pending_friends: friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
+                                    }, { new: true }, (err, newUser) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        resolve();
+                                    })
+                                } else {
+                                    status(ctx, 403, 'You never asked this user as friend.');
+                                    rejects();
+                                }
+                            } else {
+                                status(ctx, 401, 'This friend id is incorrect.');
+                                rejects();
+                            }
+                        })
+                        .catch(rejects);
+                } else {
+                    status(ctx, 401, 'This user id is incorrect.');
                     rejects();
                 }
             })
@@ -391,36 +411,175 @@ async function askFriend(ctx: any, next) {
 }
 
 async function acceptFriend(ctx: any, next) {
-    const { user: userId, friend: friendUsername } = ctx.request.body;
+    const { user: userId, friend: friendId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    Users.findOne({ friendUsername })
+                    Users.findById(friendId)
                         .then((friend: Document) => {
                             if (friend) {
-                                const pendingFriends = friend.get('pending_friends');
-                                const alreadyFriend = pendingFriends.filter(u => u.login === user.get('public.login'));
-                                if (!alreadyFriend) {
-                                    friend.set('asked_friends', friend.get('asked_friends').map(u => u.login !== user.get('public.login')))
-                                        .set('friends', [...friend.get('friends'), user.get('public')])
-                                        .save()
-                                        .catch(rejects);
-                                    user.set('pending_friends', user.get('pending_friends').map(u => u.login !== friend.get('public.login')))
-                                        .set('friends', user.get('pending_friends').map(u => u.login !== friend.get('public.login')))
-                                        .save()
-                                        .then((newUser: Document) => {
-                                            ctx.status = 200;
-                                            ctx.body = newUser.get('pending_friends');
-                                            resolve();
+                                const alreadyFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                const isPending = user.get('pending_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                if (isPending) {
+                                    if (!alreadyFriend) {
+                                        Users.findByIdAndUpdate(friendId, {
+                                            pending_friends: friend.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString()),
+                                            friends: [...friend.get('friends'), user.get('public')]
+                                        }, { new: true }, (err, newUser) => {
+                                            if (err) rejects(err);
+                                            Users.findByIdAndUpdate(userId, {
+                                                pending_friends: user.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString()),
+                                                friends: [...user.get('friends'), friend.get('public')]
+                                            }, { new: true }, (err, newUser) => {
+                                                if (err) rejects(err);
+                                                ctx.status = 200;
+                                                ctx.body = newUser.get('friends');
+                                                resolve();
+                                            })
                                         })
-                                        .catch(rejects);
+                                    } else {
+                                        status(ctx, 403, 'You are already the friend of this user.');
+                                        rejects();
+                                    }
+                                } else {
+                                    status(ctx, 403, 'You never asked this user as friend.');
+                                    rejects();
+                                }
+                            } else {
+                                status(ctx, 401, 'This friend id is incorrect.');
+                                rejects();
+                            }
+                        })
+                        .catch(rejects);
+                } else {
+                    status(ctx, 401, 'This user id is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function declineFriend(ctx: any, next) {
+    const { user: userId, friend: friendId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    Users.findById(friendId)
+                        .then((friend: Document) => {
+                            if (friend) {
+                                const isPending = user.get('pending_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                if (isPending) {
+                                    Users.findByIdAndUpdate(userId, {
+                                        pending_friends: user.get('pending_friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
+                                    }, { new: true }, (err, newUser) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        ctx.body = newUser.get('pending_friends');
+                                        resolve();
+                                    })
                                 } else {
                                     status(ctx, 403, 'You already asked this user as friend.');
                                     rejects();
                                 }
                             } else {
-                                status(ctx, 404, 'This username is incorrect.');
+                                status(ctx, 401, 'This friend id is incorrect.');
+                                rejects();
+                            }
+                        })
+                        .catch(rejects);
+                } else {
+                    status(ctx, 401, 'This user id is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function removeFriend(ctx: any, next) {
+    const { user: userId, friend: friendId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    Users.findById(friendId)
+                        .then((friend: Document) => {
+                            if (friend) {
+                                const isFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                if (isFriend) {
+                                    Users.findByIdAndUpdate(userId, {
+                                        friends: friend.get('friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
+                                    }, { new: true }, (err, doc) => {
+                                        if (err) rejects(err);
+                                        Users.findByIdAndUpdate(friendId, {
+                                            friends: user.get('friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
+                                        }, { new: true }, (err, newUser) => {
+                                            if (err) rejects(err);
+                                            ctx.status = 200;
+                                            ctx.body = newUser.get('friends');
+                                            resolve();
+                                        })
+                                    })
+                                } else {
+                                    status(ctx, 403, 'You are not friend with this user.');
+                                    rejects();
+                                }
+                            } else {
+                                status(ctx, 401, 'This friend id is incorrect.');
+                                rejects();
+                            }
+                        })
+                        .catch(rejects);
+                } else {
+                    status(ctx, 401, 'This user id is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function blockFriend(ctx: any, next) {
+    const { user: userId, friend: friendId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    Users.findById(friendId)
+                        .then((friend: Document) => {
+                            if (friend) {
+                                const isFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                if (isFriend) {
+                                    Users.findByIdAndUpdate(userId, {
+                                        friends: user.get('friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString()),
+                                        blocked_friends: [...user.get('blocked_friends'), friend.get('public')]
+                                    }, { new: true }, (err, newUser) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        ctx.body = newUser.get('blocked_friends');
+                                        resolve();
+                                    });
+                                } else {
+                                    status(ctx, 403, 'You are not friend with this user.');
+                                    rejects();
+                                }
+                            } else {
+                                status(ctx, 401, 'This username is incorrect.');
                                 rejects();
                             }
                         })
@@ -438,7 +597,50 @@ async function acceptFriend(ctx: any, next) {
 
 }
 
-async function getChallenges(ctx: any, next) {
+async function unblockFriend(ctx: any, next) {
+    const { user: userId, friend: friendId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    Users.findById(friendId)
+                        .then((friend: Document) => {
+                            if (friend) {
+                                const isBlocked = user.get('blocked_friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
+                                if (isBlocked) {
+                                    Users.findByIdAndUpdate(userId, {
+                                        friends: [...user.get('friends'), friend.get('public')],
+                                        blocked_friends: user.get('blocked_friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
+                                    }, { new: true }, (err, newUser) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        ctx.body = newUser.get('blocked_friends');
+                                        resolve();
+                                    });
+                                } else {
+                                    status(ctx, 403, 'You are not friend with this user.');
+                                    rejects();
+                                }
+                            } else {
+                                status(ctx, 401, 'This username is incorrect.');
+                                rejects();
+                            }
+                        })
+                        .catch(rejects);
+                } else {
+                    status(ctx, 401, 'This login is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function getUserChallenges(ctx: any, next) {
     const { user: userId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         if (userId) {
@@ -446,7 +648,7 @@ async function getChallenges(ctx: any, next) {
                 .then((user: Document) => {
                     if (user) {
                         ctx.status = 200;
-                        ctx.body = user.get('challenges');
+                        ctx.body = user.get('public.challenges');
                         resolve();
                     } else {
                         status(ctx, 401, 'This login is incorrect.');
@@ -459,7 +661,7 @@ async function getChallenges(ctx: any, next) {
                 .then((challengesList: Document[]) => {
                     if (challengesList.length > 0) {
                         ctx.status = 200;
-                        ctx.body = challengesList;
+                        ctx.body = challengesList.map(challenge => challenge.toJSON());
                         resolve();
                     } else {
                         status(ctx, 401, 'This login is incorrect.');
@@ -485,15 +687,22 @@ async function startChallenge(ctx: any, next) {
                         Challenges.findById(challengeId)
                             .then((challenge: Document) => {
                                 if (challenge) {
-                                    user.set('public.challenges', [...user.get('public.challenges'), challenge]).save()
-                                        .then((newChallenges: Document) => {
+                                    const alreadyStarted = user.get('public.challenges').filter((c: Document) => c.get('_id').toString() === challengeId).length > 0;
+                                    if (!alreadyStarted) {
+                                        Users.findByIdAndUpdate(userId, {
+                                            'public.challenges': [...user.get('public.challenges'), challenge]
+                                        }, { new: true }, (err, newChallenges) => {
+                                            if (err) rejects(err);
                                             ctx.status = 200;
                                             ctx.body = newChallenges.toJSON();
                                             resolve();
-                                        })
-                                        .catch(rejects);
+                                        });
+                                    } else {
+                                        status(ctx, 401, 'This challenge has already been started.');
+                                        rejects();
+                                    }
                                 } else {
-                                    status(ctx, 404, 'This challenge is incorrect.');
+                                    status(ctx, 401, 'This challenge is incorrect.');
                                     rejects();
                                 }
                             })
@@ -525,15 +734,16 @@ async function completeChallenge(ctx: any, next) {
                         Challenges.findById(challengeId)
                             .then((challenge: Document) => {
                                 if (challenge) {
-                                    user.set('public.completed_challenges', [...user.get('public.completed_challenges'), challenge]).save()
-                                        .then((newChallenges: Document) => {
-                                            ctx.status = 200;
-                                            ctx.body = newChallenges.toJSON();
-                                            resolve();
-                                        })
-                                        .catch(rejects);
+                                    Users.findByIdAndUpdate(userId, {
+                                        'public.completed_challenges': [...user.get('public.completed_challenges'), challenge]
+                                    }, { new: true }, (err, newChallenges) => {
+                                        if (err) rejects(err);
+                                        ctx.status = 200;
+                                        ctx.body = newChallenges.toJSON();
+                                        resolve();
+                                    });
                                 } else {
-                                    status(ctx, 404, 'This challenge is incorrect.');
+                                    status(ctx, 401, 'This challenge is incorrect.');
                                     rejects();
                                 }
                             })
@@ -561,12 +771,14 @@ async function failedChallenge(ctx: any, next) {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    user.set('public.challenges', user.get('public.challenges').filter(challenge => challenge._id !== challengeId)).save()
-                        .then((newChallenges: Document) => {
-                            ctx.status = 200;
-                            ctx.body = newChallenges.toJSON();
-                            resolve();
-                        })
+                    Users.findByIdAndUpdate(userId, {
+                        'public.challenges': user.get('public.challenges').filter(challenge => challenge._id !== challengeId)
+                    }, { new: true }, (err, newChallenges) => {
+                        if (err) rejects(err);
+                        ctx.status = 200;
+                        ctx.body = newChallenges.toJSON();
+                        resolve();
+                    });
                 } else {
                     status(ctx, 401, 'This login is incorrect.');
                     rejects();
@@ -591,7 +803,7 @@ async function getTournaments(ctx: any, next) {
                             .then((user: Document) => {
                                 if (user) {
                                     ctx.status = 200;
-                                    ctx.body = tournamentsList.map(tournament => tournament.get('members').includes(user.get('public.login')));
+                                    ctx.body = tournamentsList.filter(tournament => tournament.get('members').includes(user.get('public.login')));
                                     resolve();
                                 } else {
                                     status(ctx, 401, 'This login is incorrect.');
@@ -625,14 +837,14 @@ async function joinTournament(ctx: any, next) {
                     Users.findById(userId)
                         .then((user: Document) => {
                             if (user) {
-                                tournament.set('members', [...tournament.get('members'), user.get('public')])
-                                    .save()
-                                    .then((newTournament: Document) => {
-                                        ctx.status = 200;
-                                        ctx.body = newTournament.toJSON();
-                                        resolve();
-                                    })
-                                    .catch(rejects);
+                                Tournaments.findByIdAndUpdate(tournamentId, {
+                                    members: [...tournament.get('members'), user.get('public')]
+                                }, { new: true }, (err, newTournament) => {
+                                    if (err) rejects(err);
+                                    ctx.status = 200;
+                                    ctx.body = newTournament.toJSON();
+                                    resolve();
+                                });
                             } else {
                                 status(ctx, 401, 'This login is incorrect.');
                                 rejects();
@@ -657,14 +869,14 @@ async function leaveTournament(ctx: any, next) {
                     Users.findById(userId)
                         .then((user: Document) => {
                             if (user) {
-                                tournament.set('members', tournament.get('members').filter(member => member._id !== user.get('_id')))
-                                    .save()
-                                    .then((newTournament: Document) => {
-                                        ctx.status = 200;
-                                        ctx.body = newTournament.toJSON();
-                                        resolve();
-                                    })
-                                    .catch(rejects);
+                                Tournaments.findByIdAndUpdate(tournamentId, {
+                                    members: tournament.get('members').filter(member => member._id !== user.get('_id'))
+                                }, { new: true }, (err, newTournament) => {
+                                    if (err) rejects(err);
+                                    ctx.status = 200;
+                                    ctx.body = newTournament.toJSON();
+                                    resolve();
+                                });
                             } else {
                                 status(ctx, 401, 'This login is incorrect.');
                                 rejects();
@@ -680,25 +892,30 @@ async function leaveTournament(ctx: any, next) {
 
 }
 
-router.post('/api/users', getPublicUsers);
-router.post('/api/users/edit', editUser);
-router.post('/api/users/signin', signin);
-router.post('/api/users/signup', signup);
-router.post('/api/users/chats', getChats);
-router.post('/api/users/badges', getBadges);
-router.post('/api/users/tournaments', getTournaments);
-router.post('/api/users/badges', getUserBadges);
-router.post('/api/users/badges/add', addBadge);
-router.post('/api/users/badges/remove', removeBadge);
-router.post('/api/users/challenges', getChallenges);
-router.post('/api/users/challenges/start', startChallenge);
-router.post('/api/users/challenges/completed', completeChallenge);
-router.post('/api/users/challenges/failed', failedChallenge);
-router.post('/api/users/friends', getFriends);
-router.post('/api/users/friends/asked', getAskedFriends);
-router.post('/api/users/friends/pending', getPendingFriends);
-router.post('/api/users/friends/ask', askFriend);
-router.post('/api/users', getPublicUsers);
-router.post('/api/tournaments', getTournaments);
+router.post('/api/users', getPublicUsers); // Tested
+router.post('/api/users/edit', editUser); // Tested
+router.post('/api/users/signin', signin); // Tested
+router.post('/api/users/signup', signup); // Tested
+router.post('/api/users/chats', getChats); // Tested
+router.post('/api/users/badges', getUserBadges); // Tested
+router.post('/api/users/badges/add', addUserBadge); // Tested
+router.post('/api/users/badges/remove', removeUserBadge); // Tested
+router.post('/api/users/challenges', getUserChallenges); // Tested
+router.post('/api/users/challenges/start', startChallenge); // Tested
+router.post('/api/users/challenges/completed', completeChallenge); // Tested
+router.post('/api/users/challenges/failed', failedChallenge); // Tested
+router.post('/api/users/friends', getFriends); // Tested
+router.post('/api/users/friends/pending', getPendingFriends); // Tested
+router.post('/api/users/friends/ask', askFriend); // Tested
+router.post('/api/users/friends/ask/cancel', cancelAskFriend); // Tested
+router.post('/api/users/friends/accept', acceptFriend); // Tested
+router.post('/api/users/friends/decline', declineFriend); // Tested
+router.post('/api/users/friends/block', blockFriend); // Tested
+router.post('/api/users/friends/unblock', unblockFriend); // Tested
+router.post('/api/users/friends/remove', removeFriend); // Tested
+router.post('/api/badges', getBadges); // Tested (returns wrong code => 401)
+router.post('/api/tournaments', getTournaments); // Tested
+router.post('/api/tournaments/join', joinTournament); // Tested
+router.post('/api/tournaments/leave', leaveTournament); // Tested
 
 export default router;

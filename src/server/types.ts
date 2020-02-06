@@ -6,6 +6,7 @@ export interface IChatMessage {
 }
 
 export interface IBadge {
+    _id: String,
     name: String,
     description: String,
     icon: String
