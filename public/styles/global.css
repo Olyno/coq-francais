@@ -1,0 +1,71 @@
+body {
+    background-color: #80BB9A;
+    color: black;
+    height: 100vh;
+}
+
+header{
+    margin-left: 30pt;
+    margin-right: 30pt;
+    padding-top: 25pt;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    position: relative;
+    height: 94pt;
+
+}
+.burger {
+    position: relative;
+    height: 15.4pt;
+    width: 46.19pt;
+    margin-top: 15pt;
+}
+.trait:first-child {
+    width: 30.79pt;
+    height: 1pt;
+    background-color: black;
+    position: absolute;
+}
+.trait:nth-child(2){
+    width: 46.19pt;
+    height: 2pt;
+    background-color: black;
+    position: absolute;
+    top: 7.7pt;
+}
+.trait:last-child{
+    width: 27.71pt;
+    height: 2pt;
+    background-color: black;
+    position: absolute;
+    left: 18.48pt;
+    top: 15.4pt;
+}
+.name {
+    margin-top: 8pt;
+}
+.image {
+    height: 50pt;
+    width: 50pt;
+    background-color: white;
+    border-radius: 25pt;
+}
+.home {
+    background-color: white;
+    border-radius: 30pt 30pt 0 0;
+    height: 474pt;
+    position: relative;
+}
+.home p {
+    width: 260pt;
+    height: 40pt;
+    position: absolute;
+    top: 40pt;
+    left: 25pt;
+    color: #562E8A;
+    font-size: 15pt;
+    text-align: center;
+
+
+}
