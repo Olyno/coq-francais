@@ -44,32 +44,32 @@ export default [
             {
                 name: 'Run one week',
                 description: 'Run 2km per day for 1 week',
-                icon: '/icons/challenges/pourcommencer.svg',
+                icon: '/icons/challenges/challenge2.svg',
             },
             {
                 name: 'Run two weeks',
                 description: 'Run 2km per day for 2 weeks',
-                icon: '/icons/challenges/pourcommencer.svg',
+                icon: '/icons/challenges/challenge2.svg',
             },
             {
                 name: 'Run a month',
                 description: 'Run 2km per day for 1 month',
-                icon: '/icons/challenges/pourcommencer.svg',
+                icon: '/icons/challenges/challenge2.svg',
             },
             {
                 name: 'Bike one week',
                 description: 'Ride a bike 1 hour a day for 1 week',
-                icon: '/icons/challenges/pourcommencer2.svg',
+                icon: '/icons/challenges/tostart2.svg',
             },
             {
                 name: 'Bike two weeks',
                 description: 'Ride a bike 1 hour a day for 2 weeks',
-                icon: '/icons/challenges/pourcommencer2.svg',
+                icon: '/icons/challenges/tostart2.svg',
             },
             {
                 name: 'Bike a month',
                 description: 'Ride a bike 1 hour a day for 1 month',
-                icon: '/icons/challenges/pourcommencer2.svg',
+                icon: '/icons/challenges/tostart2.svg',
             },
         ]
     },
