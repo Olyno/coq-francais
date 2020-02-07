@@ -55,9 +55,7 @@
 {#if isEmpty($currentUser)}
     <Navbar>
         <div class="container has-text-centered">
-            <div class="small-section">
-                <img src="" alt="Coq Sportif Logo">
-            </div>
+            <img src="/images/logo_coq.svg" alt="Coq Sportif Logo">
             <div class="section">
 
                 {#if error}

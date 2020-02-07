@@ -131,7 +131,10 @@
                         {/each}
                     {:else}
                         <div class="has-text-centered">
-                            <h1 class="title">You don't have any blocked friend yet</h1>
+                            <h1 class="stylish-message">You don't have any blocked friend yet</h1>
+                            <div class="section">
+                                <img src="/images/blocked_friends.svg" alt="Blocked Friends Image">
+                            </div>
                         </div>
                     {/if}
                 {/if}

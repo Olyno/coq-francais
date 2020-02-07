@@ -1,6 +1,7 @@
 <script>
 
     export let menuIsVisible;
+    export let isBackButton;
 
 </script>
 
@@ -16,13 +17,19 @@
     }
 </style>
 
-{#if !menuIsVisible}
-    <div on:click={() => menuIsVisible = true}>
-        <div class="line"></div>
-        <div class="line"></div>
+{#if isBackButton}
+    <div on:click={() => isBackButton = undefined}>
+        <img class="chevron" src="/icons/chevron-left.svg" alt="Chevron Icon" />
     </div>
 {:else}
-    <div on:click={() => menuIsVisible = false}>
-        <img class="cross" src="/icons/x.svg" alt="Cross of Burger">
-    </div>
+    {#if !menuIsVisible}
+        <div on:click={() => menuIsVisible = true}>
+            <div class="line"></div>
+            <div class="line"></div>
+        </div>
+    {:else}
+        <div on:click={() => menuIsVisible = false}>
+            <img class="cross" src="/icons/x.svg" alt="Cross of Burger">
+        </div>
+    {/if}
 {/if}

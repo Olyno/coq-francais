@@ -163,7 +163,7 @@
                         </div>
                     {:else}
                         <div class="has-text-centered">
-                            <h1 class="title">You don't have any badge yet</h1>
+                            <h1 class="stylish-message">You don't have any badge yet</h1>
                         </div>
                     {/if}
                 {/if}

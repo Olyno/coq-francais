@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 import { UserModel as Users } from '../database/schemas/User';
 import { BadgeModel as Badges } from '../database/schemas/Badge';
 import { TournamentModel as Tournaments } from '../database/schemas/Tournament';
-import { ChallengeModel as Challenges } from '../database/schemas/Challenge';
+import { ChallengeCategoryModel as ChallengeCategory } from '../database/schemas/ChallengeCategory';
 import { ChatRoomModel as Rooms } from '../database/schemas/chat/ChatRoom';
 import { status, error } from '../../utils';
 import { IPublicUser, IBadge } from '../types';
@@ -59,6 +59,7 @@ async function signup(ctx: any, next) {
     await new Promise((resolve, rejects) => {
         Users.findOne({ 'public.username': username, email })
             .then((user: Document) => {
+                console.log(user)
                 if (!user) {
                     bcrypt.hash(password, 10)
                         .then((encryptedPassword: string) => {
@@ -597,12 +598,12 @@ async function removeFriend(ctx: any, next) {
                             if (friend) {
                                 const isFriend = user.get('friends').filter((f: Document) => f.get('_id').toString() === friend.get('public._id').toString()).length > 0;
                                 if (isFriend) {
-                                    Users.findByIdAndUpdate(userId, {
-                                        friends: friend.get('friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
-                                    }, { new: true }, (err, doc) => {
+                                    Users.findOneAndUpdate({ 'public._id': friendId }, {
+                                        friends: user.get('friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
+                                    }, { new: true }, (err, newFriend) => {
                                         if (err) rejects(err);
-                                        Users.findOneAndUpdate({ 'public._id': friendId }, {
-                                            friends: user.get('friends').filter((f: Document) => f.get('_id').toString() !== friend.get('public._id').toString())
+                                        Users.findByIdAndUpdate(userId, {
+                                            friends: friend.get('friends').filter((f: Document) => f.get('_id').toString() !== user.get('public._id').toString())
                                         }, { new: true }, (err, newUser) => {
                                             if (err) rejects(err);
                                             ctx.status = 200;
@@ -725,8 +726,8 @@ async function unblockFriend(ctx: any, next) {
 
 }
 
-async function getUserChallenges(ctx: any, next) {
-    const { user: userId } = ctx.request.body;
+async function getChallenges(ctx: any, next) {
+    const { user: userId, category: categoryName } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         if (userId) {
             Users.findById(userId)
@@ -742,11 +743,13 @@ async function getUserChallenges(ctx: any, next) {
                 })
                 .catch(rejects);
         } else {
-            Challenges.find({})
-                .then((challengesList: Document[]) => {
-                    if (challengesList.length > 0) {
+            ChallengeCategory.find({})
+                .then((categoryList: Document[]) => {
+                    if (categoryList.length > 0) {
                         ctx.status = 200;
-                        ctx.body = challengesList.map(challenge => challenge.toJSON());
+                        ctx.body = categoryName ? 
+                            categoryList.filter(category => category.get('name') === categoryName).map(category => category.get('challenges').map(challenge => challenge.toJSON()))[0] 
+                            : categoryList.map(category => category.get('challenges').map(challenge => challenge.toJSON()));
                         resolve();
                     } else {
                         status(ctx, 401, 'This login is incorrect.');
@@ -762,40 +765,87 @@ async function getUserChallenges(ctx: any, next) {
 
 }
 
+async function getChallengeCategories(ctx: any, next) {
+    await new Promise((resolve, rejects) => {
+        ChallengeCategory.find({})
+            .then((categoryList: Document[]) => {
+                if (categoryList.length > 0) {
+                    ctx.status = 200;
+                    ctx.body = categoryList.map(category => category.toJSON());
+                    resolve();
+                } else {
+                    status(ctx, 401, 'This login is incorrect.');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
+async function getCompletedChallenges(ctx: any, next) {
+    const { user: userId } = ctx.request.body;
+    await new Promise((resolve, rejects) => {
+        Users.findById(userId)
+            .then((user: Document) => {
+                if (user) {
+                    ctx.status = 200;
+                    ctx.body = user.get('public.completed_challenges');
+                    resolve();
+                } else {
+                    status(ctx, 401, 'This login is incorrect');
+                    rejects();
+                }
+            })
+            .catch(rejects);
+    })
+    .catch(err => err && error(err.message || err, ctx));
+
+    return next();
+
+}
+
 async function startChallenge(ctx: any, next) {
     const { user: userId, challenge: challengeId } = ctx.request.body;
     await new Promise((resolve, rejects) => {
         Users.findById(userId)
             .then((user: Document) => {
                 if (user) {
-                    if (challengeId) {
-                        Challenges.findById(challengeId)
-                            .then((challenge: Document) => {
+                    ChallengeCategory.find({})
+                        .then((categories: Document[]) => {
+                            if (categories.length > 0) {
+                                const challenge = categories.map(category => {
+                                    return category.get('challenges').filter((c: Document) => {
+                                        return c.get('_id').toString() === challengeId;
+                                    })[0];
+                                })[0];
                                 if (challenge) {
-                                    const alreadyStarted = user.get('public.challenges').filter((c: Document) => c.get('_id').toString() === challengeId).length > 0;
+                                    const alreadyStarted = user.get('public.challenges').filter((c: Document) => c.get('_id').toString() === challengeId) > 0;
                                     if (!alreadyStarted) {
                                         Users.findByIdAndUpdate(userId, {
                                             'public.challenges': [...user.get('public.challenges'), challenge]
                                         }, { new: true }, (err, newChallenges) => {
                                             if (err) rejects(err);
                                             ctx.status = 200;
-                                            ctx.body = newChallenges.toJSON();
+                                            ctx.body = newChallenges.get('public.challenges');
                                             resolve();
                                         });
                                     } else {
-                                        status(ctx, 401, 'This challenge has already been started.');
+                                        status(ctx, 401, 'You already started this challenge');
                                         rejects();
                                     }
                                 } else {
                                     status(ctx, 401, 'This challenge is incorrect.');
                                     rejects();
                                 }
-                            })
-                    } else {
-                        ctx.status = 200;
-                        ctx.body = user.get('public.completed_challenges');
-                        resolve();
-                    }
+                            } else {
+                                status(ctx, 401, 'This challenge is incorrect.');
+                                rejects();
+                            }
+                        })
                 } else {
                     status(ctx, 401, 'This login is incorrect.');
                     rejects();
@@ -816,17 +866,33 @@ async function completeChallenge(ctx: any, next) {
             .then((user: Document) => {
                 if (user) {
                     if (challengeId) {
-                        Challenges.findById(challengeId)
-                            .then((challenge: Document) => {
-                                if (challenge) {
-                                    Users.findByIdAndUpdate(userId, {
-                                        'public.completed_challenges': [...user.get('public.completed_challenges'), challenge]
-                                    }, { new: true }, (err, newChallenges) => {
-                                        if (err) rejects(err);
-                                        ctx.status = 200;
-                                        ctx.body = newChallenges.toJSON();
-                                        resolve();
-                                    });
+                        ChallengeCategory.find({})
+                            .then((categories: Document[]) => {
+                                if (categories.length > 0) {
+                                    const challenge = categories.map(category => {
+                                        return category.get('challenges').filter((c: Document) => {
+                                            return c.get('_id').toString() === challengeId;
+                                        })[0];
+                                    })[0];
+                                    if (challenge) {
+                                        Users.findByIdAndUpdate(userId, {
+                                            'public.points': user.get('public.points') + challenge.get('points'),
+                                            'public.challenges': user.get('public.challenges').filter((c: Document) => c.get('_id').toString() !== challengeId),
+                                            'public.completed_challenges': [...user.get('public.completed_challenges'), challenge]
+                                        }, { new: true }, (err, newChallenges) => {
+                                            if (err) rejects(err);
+                                            ctx.status = 200;
+                                            ctx.body = {
+                                                points: newChallenges.get('public.points'),
+                                                completed_challenges: newChallenges.get('public.completed_challenges'),
+                                                challenges: newChallenges.get('public.challenges')
+                                            };
+                                            resolve();
+                                        });
+                                    } else {
+                                        status(ctx, 401, 'This challenge is incorrect.');
+                                        rejects();
+                                    }
                                 } else {
                                     status(ctx, 401, 'This challenge is incorrect.');
                                     rejects();
@@ -985,9 +1051,9 @@ router.post('/api/users/chats', getChats); // Tested
 router.post('/api/users/badges', getUserBadges); // Tested
 router.post('/api/users/badges/add', addUserBadge); // Tested
 router.post('/api/users/badges/remove', removeUserBadge); // Tested
-router.post('/api/users/challenges', getUserChallenges); // Tested
 router.post('/api/users/challenges/start', startChallenge); // Tested
-router.post('/api/users/challenges/completed', completeChallenge); // Tested
+router.post('/api/users/challenges/completed', getCompletedChallenges); // Tested
+router.post('/api/users/challenges/complete', completeChallenge); // Tested
 router.post('/api/users/challenges/failed', failedChallenge); // Tested
 router.post('/api/users/friends', getFriends); // Tested
 router.post('/api/users/friends/pending', getPendingFriends); // Tested
@@ -1004,5 +1070,7 @@ router.post('/api/badges', getBadges); // Tested (returns wrong code => 401)
 router.post('/api/tournaments', getTournaments); // Tested
 router.post('/api/tournaments/join', joinTournament); // Tested
 router.post('/api/tournaments/leave', leaveTournament); // Tested
+router.post('/api/challenges', getChallenges); // Tested
+router.post('/api/challenges/categories', getChallengeCategories); // Tested
 
 export default router;

@@ -3,10 +3,12 @@ body {
     height: 100vh;
 }
 
+.wrap { flex-wrap: wrap; }
 .small-section { padding: 1rem 1.5rem; }
 
 .green-background { background-color: #80BB9A; color: white; }
 .purple-background { background-color: #562E8A; color: white; }
+.yellow-background { background-color: #F7E045; }
 .is-white { color: white }
 .is-bottom { bottom: 0px; }
 .with-line { border-bottom: solid #F7E045 !important; }
@@ -27,6 +29,11 @@ body {
     color: #4D4D4D;
 }
 
+.stylish-message {
+    font-size: 15px;
+    color: #562E8A;
+}
+
 input {
     border-bottom: solid #F7E045 !important;
     border-top-style: hidden !important;
@@ -34,6 +41,16 @@ input {
     border-left-style: hidden !important;
     border-right: transparent !important;
     color: #4D4D4D !important;
+}
+
+.is-button {
+    width: 122pt;
+    height: 40pt;
+    transform: scale(1, 1.1);
+    text-align: center;
+    line-height: 0px;
+    font-size: 25px;
+    border-radius: 10px;
 }
 
 .white-bordered-background {

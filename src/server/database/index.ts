@@ -2,10 +2,10 @@ import { connect } from 'mongoose';
 import { uriEncode } from '../../utils';
 
 import { BadgeModel as Badges } from './schemas/Badge';
-import { ChallengeModel as Challenges } from './schemas/Challenge';
+import { ChallengeCategoryModel as ChallengesCategoy } from './schemas/ChallengeCategory';
 
 import badgesList from './data/badges';
-import challengesList from './data/challenges';
+import challengeCategorysList from './data/challengesCategory';
 
 export async function login(user, password, url) {
     const currentUrl = url.replace(/<username>/g, user).replace(/<password>/g, uriEncode(password));
@@ -19,11 +19,11 @@ export async function login(user, password, url) {
                         }
                     })
             }
-            for (const challenge of challengesList) {
-                Challenges.findOne({ name: challenge.name })
-                    .then((challengeFound) => {
-                        if (!challengeFound) {
-                            Challenges.create(challenge);
+            for (const category of challengeCategorysList) {
+                ChallengesCategoy.findOne({ name: category.name })
+                    .then((categoryFound) => {
+                        if (!categoryFound) {
+                            ChallengesCategoy.create(category);
                         }
                     })
             }

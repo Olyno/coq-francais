@@ -13,7 +13,7 @@ import { login as dbLogin } from './database';
 import config from './config';
 import routes from './routes';
 
-const PORT = process.env.PORT || config.server.port || 3000;
+const PORT = process.env.PORT || config.server.port || 5000;
 
 const app: Koa = new Koa();
 
