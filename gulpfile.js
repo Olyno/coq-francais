@@ -25,7 +25,9 @@ async function buildAssets(production) {
     return rollup.rollup({
         input: 'src/main.js',
         plugins: [
-            routify(),
+            routify({
+                singleBuild: production
+            }),
             svelte({
                 // enable run-time checks when not in production
                 dev: !production,
@@ -72,9 +74,9 @@ async function buildAssets(production) {
 async function build(production) {
 
     buildAssets(production);
+    buildServer(production);
 
     if (!production) {
-        buildServer(production);
         watch(['src/**/*.svelte', 'src/**/*.js'], () => buildAssets(production));
         watch(['src/**/*.ts'], () => buildServer(production));
     }
