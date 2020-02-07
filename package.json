@@ -4,7 +4,7 @@
   "scripts": {
     "build": "gulp prod",
     "dev": "gulp dev",
-    "start": "ts-node src/server"
+    "start": "gulp prod && ts-node src/server"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^11.0.0",
