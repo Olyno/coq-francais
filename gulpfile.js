@@ -5,6 +5,7 @@ const rollup = require('rollup');
 const svelte = require('rollup-plugin-svelte');
 const resolve = require('@rollup/plugin-node-resolve');
 const commonjs = require('@rollup/plugin-commonjs');
+const typescript = require('rollup-plugin-typescript'),
 const livereload = require('rollup-plugin-livereload');
 const { terser } = require('rollup-plugin-terser');
 const { routify } = require('@sveltech/routify');

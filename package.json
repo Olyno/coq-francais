@@ -10,6 +10,20 @@
     "@rollup/plugin-commonjs": "^11.0.0",
     "@rollup/plugin-node-resolve": "^7.1.1",
     "@sveltech/routify": "^1.0.1-52",
+    "gulp": "^4.0.2",
+    "rollup": "^1.20.0",
+    "rollup-plugin-livereload": "^1.0.0",
+    "rollup-plugin-svelte": "^5.0.3",
+    "rollup-plugin-terser": "^5.1.2",
+    "rollup-plugin-typescript": "^1.0.1",
+    "svelte": "^3.0.0",
+    "tree-kill": "^1.2.2",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.4"
+  },
+  "dependencies": {
+    "@koa/cors": "^3.0.0",
+    "@koa/router": "^8.0.5",
     "@types/bcrypt": "^3.0.0",
     "@types/koa": "^2.11.0",
     "@types/koa-bodyparser": "^4.3.0",
@@ -21,20 +35,8 @@
     "@types/koa-static": "^4.0.1",
     "@types/koa__cors": "^3.0.1",
     "@types/koa__router": "^8.0.2",
-    "@types/mongoose": "^5.5.36",
+    "@types/mongoose": "^5.7.0",
     "@types/socket.io": "^2.1.4",
-    "gulp": "^4.0.2",
-    "rollup": "^1.20.0",
-    "rollup-plugin-livereload": "^1.0.0",
-    "rollup-plugin-svelte": "^5.0.3",
-    "rollup-plugin-terser": "^5.1.2",
-    "svelte": "^3.0.0",
-    "tree-kill": "^1.2.2",
-    "typescript": "^3.7.4"
-  },
-  "dependencies": {
-    "@koa/cors": "^3.0.0",
-    "@koa/router": "^8.0.5",
     "axios": "^0.19.2",
     "bcrypt": "^3.0.8",
     "js-cookie": "^2.2.1",
@@ -50,7 +52,6 @@
     "mongoose": "^5.8.3",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
-    "toml": "^3.0.0",
-    "ts-node": "^8.6.2"
+    "toml": "^3.0.0"
   }
 }
